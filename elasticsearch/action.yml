@@ -33,7 +33,15 @@ inputs:
     description: 'Number of seconds to wait after launch'
     required: false
     default: 10
-    
+  docker_network:
+    description: 'The name for the docker network to be created'
+    required: false
+    default: elastic
+  docker_container_prefix:
+    description: 'The name for the docker container to be created'
+    required: false
+    default: es
+
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -45,3 +53,5 @@ runs:
     SECURITY_ENABLED: ${{ inputs.security-enabled }}
     ELASTICSEARCH_PASSWORD: ${{ inputs.elasticsearch_password }}
     WAIT: ${{ inputs.wait }}
+    DOCKER_NETWORK: ${{ inputs.docker_network }}
+    DOCKER_CONTAINER_PREFIX: ${{ inputs.docker_container_prefix }}

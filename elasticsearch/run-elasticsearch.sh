@@ -9,7 +9,7 @@ fi
 
 MAJOR_VERSION=`echo ${STACK_VERSION} | cut -c 1`
 
-docker network inspect elastic >/dev/null 2>&1 || docker network create elastic
+docker network inspect ${DOCKER_NETWORK} >/dev/null 2>&1 || docker network create ${DOCKER_NETWORK}
 
 mkdir -p /es/plugins/
 chown -R 1000:1000 /es/
@@ -17,7 +17,7 @@ chown -R 1000:1000 /es/
 if [[ ! -z $PLUGINS ]]; then
   docker run --rm \
     --user=0:0 \
-    --network=elastic \
+    --network=${DOCKER_NETWORK} \
     -v /es/plugins/:/usr/share/elasticsearch/plugins/ \
     --entrypoint=/usr/share/elasticsearch/bin/elasticsearch-plugin \
     docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION} \
@@ -27,7 +27,7 @@ fi
 for (( node=1; node<=${NODES-1}; node++ ))
 do
   port_com=$((9300 + $node - 1))
-  UNICAST_HOSTS+="es$node:${port_com},"
+  UNICAST_HOSTS+="${DOCKER_CONTAINER_PREFIX}$node:${port_com},"
 done
 
 for (( node=1; node<=${NODES-1}; node++ ))
@@ -37,7 +37,7 @@ do
   if [ "x${MAJOR_VERSION}" == 'x6' ]; then
     docker run \
       --rm \
-      --env "node.name=es${node}" \
+      --env "node.name=${DOCKER_CONTAINER_PREFIX}${node}" \
       --env "cluster.name=docker-elasticsearch" \
       --env "cluster.routing.allocation.disk.threshold_enabled=false" \
       --env "bootstrap.memory_lock=true" \
@@ -52,17 +52,17 @@ do
       --publish "${port}:${port}" \
       --publish "${port_com}:${port_com}" \
       --detach \
-      --network=elastic \
-      --name="es${node}" \
+      --network=${DOCKER_NETWORK} \
+      --name="${DOCKER_CONTAINER_PREFIX}${node}" \
       -v /es/plugins/:/usr/share/elasticsearch/plugins/ \
       docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
   elif [ "x${MAJOR_VERSION}" == 'x7' ]; then
     docker run \
       --rm \
-      --env "node.name=es${node}" \
+      --env "node.name=$DOCKER_CONTAINER_PREFIX${node}" \
       --env "cluster.name=docker-elasticsearch" \
-      --env "cluster.initial_master_nodes=es1" \
-      --env "discovery.seed_hosts=es1" \
+      --env "cluster.initial_master_nodes=${DOCKER_CONTAINER_PREFIX}1" \
+      --env "discovery.seed_hosts=${DOCKER_CONTAINER_PREFIX}1" \
       --env "cluster.routing.allocation.disk.threshold_enabled=false" \
       --env "bootstrap.memory_lock=true" \
       --env "ES_JAVA_OPTS=-Xms1g -Xmx1g" \
@@ -74,8 +74,8 @@ do
       --ulimit memlock=-1:-1 \
       --publish "${port}:${port}" \
       --detach \
-      --network=elastic \
-      --name="es${node}" \
+      --network=${DOCKER_NETWORK} \
+      --name="${DOCKER_CONTAINER_PREFIX}${node}" \
       -v /es/plugins/:/usr/share/elasticsearch/plugins/ \
       docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
   elif [ "x${MAJOR_VERSION}" == 'x8' ] || [ "x${MAJOR_VERSION}" == 'x9' ]; then
@@ -85,10 +85,10 @@ do
         --rm \
         --env "ELASTIC_PASSWORD=${elasticsearch_password}" \
         --env "xpack.license.self_generated.type=basic" \
-        --env "node.name=es${node}" \
+        --env "node.name=${DOCKER_CONTAINER_PREFIX}${node}" \
         --env "cluster.name=docker-elasticsearch" \
-        --env "cluster.initial_master_nodes=es1" \
-        --env "discovery.seed_hosts=es1" \
+        --env "cluster.initial_master_nodes=${DOCKER_CONTAINER_PREFIX}1" \
+        --env "discovery.seed_hosts=${DOCKER_CONTAINER_PREFIX}1" \
         --env "cluster.routing.allocation.disk.threshold_enabled=false" \
         --env "bootstrap.memory_lock=true" \
         --env "ES_JAVA_OPTS=-Xms1g -Xmx1g" \
@@ -97,8 +97,8 @@ do
         --ulimit nofile=65536:65536 \
         --ulimit memlock=-1:-1 \
         --publish "${port}:${port}" \
-        --network=elastic \
-        --name="es${node}" \
+        --network=${DOCKER_NETWORK} \
+        --name="${DOCKER_CONTAINER_PREFIX}${node}" \
         --detach \
         -v /es/plugins/:/usr/share/elasticsearch/plugins/ \
         docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
@@ -106,10 +106,10 @@ do
       docker run \
         --rm \
         --env "xpack.security.enabled=false" \
-        --env "node.name=es${node}" \
+        --env "node.name=${DOCKER_CONTAINER_PREFIX}${node}" \
         --env "cluster.name=docker-elasticsearch" \
-        --env "cluster.initial_master_nodes=es1" \
-        --env "discovery.seed_hosts=es1" \
+        --env "cluster.initial_master_nodes=${DOCKER_CONTAINER_PREFIX}1" \
+        --env "discovery.seed_hosts=${DOCKER_CONTAINER_PREFIX}1" \
         --env "cluster.routing.allocation.disk.threshold_enabled=false" \
         --env "bootstrap.memory_lock=true" \
         --env "ES_JAVA_OPTS=-Xms1g -Xmx1g" \
@@ -119,8 +119,8 @@ do
         --ulimit nofile=65536:65536 \
         --ulimit memlock=-1:-1 \
         --publish "${port}:${port}" \
-        --network=elastic \
-        --name="es${node}" \
+        --network=${DOCKER_NETWORK} \
+        --name="${DOCKER_CONTAINER_PREFIX}${node}" \
         --detach \
         -v /es/plugins/:/usr/share/elasticsearch/plugins/ \
         docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
@@ -130,7 +130,7 @@ done
 
 if [ "x${MAJOR_VERSION}" == 'x8' ] && [ "${SECURITY_ENABLED}" == 'true' ]; then
   docker run \
-    --network elastic \
+    --network ${DOCKER_NETWORK} \
     --rm \
     appropriate/curl \
     --max-time 120 \
@@ -141,10 +141,10 @@ if [ "x${MAJOR_VERSION}" == 'x8' ] && [ "${SECURITY_ENABLED}" == 'true' ]; then
     --silent \
     -k \
     -u elastic:${ELASTICSEARCH_PASSWORD-'changeme'} \
-    https://es1:$PORT
+    https://${DOCKER_CONTAINER_PREFIX}1:$PORT
 else
   docker run \
-    --network elastic \
+    --network ${DOCKER_NETWORK} \
     --rm \
     appropriate/curl \
     --max-time 120 \
@@ -153,7 +153,7 @@ else
     --retry-connrefused \
     --show-error \
     --silent \
-    http://es1:$PORT
+    http://${DOCKER_CONTAINER_PREFIX}1:$PORT
 fi
 
 sleep $WAIT
