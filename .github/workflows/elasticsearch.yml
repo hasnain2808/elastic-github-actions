@@ -226,6 +226,9 @@ jobs:
           security-enabled: false
           stack-version: ${{ matrix.elasticsearch }}
           port: 9201
+          docker_network: elastic2
+          docker_container_prefix: elasticsearch
+
 
       - name: First Elasticsearch is reachable
         run: |
