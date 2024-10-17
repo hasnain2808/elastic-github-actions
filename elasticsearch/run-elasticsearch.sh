@@ -26,14 +26,14 @@ fi
 
 for (( node=1; node<=${NODES-1}; node++ ))
 do
-  port_com=$((9300 + $node - 1))
+  port_com=$((PORT_TRANSPORT + $node - 1))
   UNICAST_HOSTS+="${DOCKER_CONTAINER_PREFIX}$node:${port_com},"
 done
 
 for (( node=1; node<=${NODES-1}; node++ ))
 do
   port=$((PORT + $node - 1))
-  port_com=$((9300 + $node - 1))
+  port_com=$((PORT_TRANSPORT + $node - 1))
   if [ "x${MAJOR_VERSION}" == 'x6' ]; then
     docker run \
       --rm \
